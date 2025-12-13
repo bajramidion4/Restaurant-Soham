@@ -27,3 +27,16 @@ body {
         border: 1px solid #ccc;
         border-radius: 5px;
     }
+button {
+        width: 100%;
+        padding: 10px;
+        background: #ff6a00;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    button:hover {
+        background: #e05f00;
+    }
