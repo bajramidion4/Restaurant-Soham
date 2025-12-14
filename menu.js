@@ -25,3 +25,12 @@ function updateOrder() {
     const li = document.createElement("li");
     li.textContent = `${item.name} - €${item.price.toFixed(2)}`;
     li.style.cursor = "pointer";
+
+  // ✅ Remove item when clicked
+    li.addEventListener("click", () => {
+      removeItem(index);
+    });
+
+    orderList.appendChild(li);
+  });
+  
