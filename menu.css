@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 * {
   margin: 0;
   padding: 0;
@@ -133,7 +133,7 @@ a span{
     flex-direction: column;
     gap: 20px;
   }
-=======
+
 * {
   margin: 0;
   padding: 0;
@@ -179,4 +179,58 @@ body {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   cursor: pointer;
 }
->>>>>>> 0a528f6afee006a294ddb412f8fe56037c947b31
+ 
+.menu-section {
+    flex: 1;
+    margin-bottom: 15px;
+  }
+
+  .order-summary {
+    width: 100%;
+    padding: 15px;
+  }
+
+  .menu-item {
+    padding: 12px;
+  }
+
+  .price {
+    font-size: 1em;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-container {
+    padding: 10px;
+  }
+
+  .menu-item {
+    padding: 10px;
+  }
+
+  .menu-item h3 {
+    font-size: 16px;
+  }
+
+  .price {
+    font-size: 0.9em;
+  }
+
+  .butoni {
+    width: 250px;
+    height: 4em;
+  }
+
+  .order-summary h2 {
+    font-size: 12px;
+  }
+
+  .total {
+    font-size: 12px;
+  }
+}
+
+<<<<<<< HEAD
+
+=======
+>>>>>>> 85a44f96e84b248d0468209e58dd01e593ad9280
