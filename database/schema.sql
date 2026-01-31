@@ -98,3 +98,5 @@ INSERT IGNORE INTO news (id, title, body, media_path, created_by)
 VALUES
   (1, 'Lajm i ri', 'Ky lajm është nga databaza dhe tregohet në faqen News.', NULL, 1);
 
+ALTER TABLE products
+ADD COLUMN updated_at DATETIME NULL AFTER created_at;
