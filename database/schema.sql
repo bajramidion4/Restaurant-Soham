@@ -1,6 +1,3 @@
--- Restaurant Soham - Phase 2 (MySQL / phpMyAdmin)
--- Import this file in phpMyAdmin.
-
 CREATE DATABASE IF NOT EXISTS restaurant_soham
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
@@ -45,7 +42,7 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT NULL,
   price DECIMAL(10,2) NULL,
   image_path VARCHAR(255) NULL,
-  created_by INT UNSIGNED NULL,
+   created_by INT UNSIGNED NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
@@ -68,9 +65,8 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   email VARCHAR(190) NOT NULL,
   message TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- Seed (minimal)
+  ) ENGINE=InnoDB;
+  -- Seed (minimal)
 INSERT IGNORE INTO users (id, name, email, password_hash, role)
 VALUES
   (1, 'Admin', 'admin@soham.test', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');

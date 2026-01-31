@@ -11,4 +11,3 @@ require __DIR__ . '/src/Helpers/helpers.php';
 
 $db = new Database($config);
 $auth = new Auth($db);
-

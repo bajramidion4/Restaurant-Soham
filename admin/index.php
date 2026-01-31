@@ -11,6 +11,12 @@ if (!$auth->check() || !$auth->isAdmin()) {
 $tab = (string)($_GET['tab'] ?? 'pages');
 $editProductId = (int)($_GET['edit'] ?? 0);
 $editNewsId = (int)($_GET['edit_news'] ?? 0);
+$editUserId = (int)($_GET['edit_user'] ?? 0);
+$editCatId = (int)($_GET['edit_cat'] ?? 0);
+$allowedTabs = ['users', 'categories', 'pages', 'products', 'news', 'contacts'];
+if (!in_array($tab, $allowedTabs, true)) {
+    $tab = 'pages';
+}
 $error = $_SESSION['_admin_error'] ?? null;
 $ok = $_SESSION['_admin_ok'] ?? null;
 unset($_SESSION['_admin_error'], $_SESSION['_admin_ok']);
@@ -42,11 +48,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_check($_POST['_csrf'] ?? null)) {
         $_SESSION['_admin_error'] = 'CSRF error. Rifresko faqen dhe provo përsëri.';
         $failTab = match($_POST['action'] ?? '') {
-            'product_save' => 'products',
-            'news_save' => 'news',
+            'user_save', 'user_delete' => 'users',
+            'category_save', 'category_delete' => 'categories',
+            'product_save', 'product_delete' => 'products',
+            'news_save', 'news_delete' => 'news',
             'page_save', 'page_create', 'page_delete' => 'pages',
             'contact_delete' => 'contacts',
-            default => 'products',
+            default => 'pages',
         };
         redirect('index.php?tab=' . $failTab);
     } else {
@@ -161,20 +169,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $tab = 'pages';
             }
+
+            // CRUD Përdorues
+            if ($action === 'user_save') {
+                $id = (int)($_POST['id'] ?? 0);
+                $name = trim((string)($_POST['name'] ?? ''));
+                $email = trim((string)($_POST['email'] ?? ''));
+                $role = (string)($_POST['role'] ?? 'user');
+                if (!in_array($role, ['admin', 'user'], true)) { $role = 'user'; }
+                if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $_SESSION['_admin_error'] = 'Emri dhe email i vlefshëm janë të detyrueshëm.';
+                    redirect('index.php?tab=users');
+                }
+                $pass = trim((string)($_POST['password'] ?? ''));
+                if ($id > 0) {
+                    $existing = $db->fetchOne('SELECT id FROM users WHERE email = ? AND id != ?', [$email, $id]);
+                    if ($existing) {
+                        $_SESSION['_admin_error'] = 'Ky email ekziston tashmë.';
+                        redirect('index.php?tab=users&edit_user=' . $id);
+                    }
+                    if ($pass !== '') {
+                        $hash = password_hash($pass, PASSWORD_DEFAULT);
+                        $db->exec('UPDATE users SET name=?, email=?, role=?, password_hash=? WHERE id=?', [$name, $email, $role, $hash, $id]);
+                    } else {
+                        $db->exec('UPDATE users SET name=?, email=?, role=? WHERE id=?', [$name, $email, $role, $id]);
+                    }
+                    $_SESSION['_admin_ok'] = 'Përdoruesi u përditësua.';
+                    redirect('index.php?tab=users&edit_user=' . $id);
+                } else {
+                    if ($pass === '') { $pass = bin2hex(random_bytes(4)); }
+                    if ($db->fetchOne('SELECT id FROM users WHERE email = ?', [$email])) {
+                        $_SESSION['_admin_error'] = 'Ky email ekziston.';
+                        redirect('index.php?tab=users');
+                    }
+                    $hash = password_hash($pass, PASSWORD_DEFAULT);
+                    $db->exec('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', [$name, $email, $hash, $role]);
+                    $_SESSION['_admin_ok'] = 'Përdoruesi u shtua. Fjalëkalimi i përkohshëm: ' . $pass;
+                    redirect('index.php?tab=users');
+                }
+                $tab = 'users';
+            }
+            if ($action === 'user_delete') {
+                $uid = (int)($_POST['id'] ?? 0);
+                if ($uid !== (int)($auth->user()['id'])) {
+                    $db->exec('DELETE FROM users WHERE id = ?', [$uid]);
+                    $ok = 'Përdoruesi u fshi.';
+                } else {
+                    $error = 'Nuk mund ta fshish vetveten.';
+                }
+                $tab = 'users';
+            }
+
+            // CRUD Kategori (menu)
+            if ($action === 'category_save') {
+                $id = (int)($_POST['id'] ?? 0);
+                $name = trim((string)($_POST['name'] ?? ''));
+                if ($name === '') {
+                    $_SESSION['_admin_error'] = 'Emri i kategorisë është i detyrueshëm.';
+                    redirect('index.php?tab=categories');
+                }
+                if ($id > 0) {
+                    $db->exec('UPDATE categories SET name = ? WHERE id = ?', [$name, $id]);
+                    $_SESSION['_admin_ok'] = 'Kategoria u përditësua.';
+                    redirect('index.php?tab=categories&edit_cat=' . $id);
+                } else {
+                    $db->exec('INSERT INTO categories (name) VALUES (?)', [$name]);
+                    $_SESSION['_admin_ok'] = 'Kategoria u shtua.';
+                    redirect('index.php?tab=categories');
+                }
+                $tab = 'categories';
+            }
+            if ($action === 'category_delete') {
+                $db->exec('DELETE FROM categories WHERE id = ?', [(int)($_POST['id'] ?? 0)]);
+                $ok = 'Kategoria u fshi.';
+                $tab = 'categories';
+            }
         } catch (\Throwable $t) {
             $_SESSION['_admin_error'] = 'Gabim: ' . $t->getMessage();
-            $errTab = in_array($action, ['product_save','product_delete']) ? 'products' : (in_array($action, ['news_save','news_delete']) ? 'news' : (in_array($action, ['page_save','page_create','page_delete']) ? 'pages' : 'contacts'));
+            $errTab = 'pages';
+            if (in_array($action, ['user_save','user_delete'])) $errTab = 'users';
+            elseif (in_array($action, ['category_save','category_delete'])) $errTab = 'categories';
+            elseif (in_array($action, ['product_save','product_delete'])) $errTab = 'products';
+            elseif (in_array($action, ['news_save','news_delete'])) $errTab = 'news';
+            elseif (in_array($action, ['contact_delete'])) $errTab = 'contacts';
             redirect('index.php?tab=' . $errTab);
         }
     }
 }
 
+$users = $db->fetchAll('SELECT id, name, email, role, created_at FROM users ORDER BY id ASC');
+$categories = $db->fetchAll('SELECT id, name FROM categories ORDER BY name ASC');
 $pages = $db->fetchAll('SELECT slug, title, body, updated_at FROM pages ORDER BY slug ASC');
-$cats = $db->fetchAll('SELECT id, name FROM categories ORDER BY name ASC');
+$cats = $categories;
 $products = $db->fetchAll('SELECT p.*, c.name AS category FROM products p LEFT JOIN categories c ON c.id=p.category_id ORDER BY p.created_at DESC');
 $news = $db->fetchAll('SELECT n.*, u.name AS author FROM news n LEFT JOIN users u ON u.id=n.created_by ORDER BY n.created_at DESC');
 $contacts = $db->fetchAll('SELECT * FROM contact_messages ORDER BY created_at DESC');
 
+$editUser = $editUserId > 0 ? $db->fetchOne('SELECT id, name, email, role FROM users WHERE id = ?', [$editUserId]) : null;
+$editCat = $editCatId > 0 ? $db->fetchOne('SELECT id, name FROM categories WHERE id = ?', [$editCatId]) : null;
 $editProduct = $editProductId > 0 ? $db->fetchOne('SELECT * FROM products WHERE id = ?', [$editProductId]) : null;
 $editNews = $editNewsId > 0 ? $db->fetchOne('SELECT * FROM news WHERE id = ?', [$editNewsId]) : null;
 
@@ -182,16 +274,90 @@ $title = 'Admin Dashboard';
 require __DIR__ . '/../partials/header.php';
 ?>
 
-<h2>Admin Dashboard</h2>
+<h2>Admin Dashboard – CRUD (një faqe)</h2>
+<p class="text-muted small mb-2">Përdorues · Kategori/Menu · Faqe · Produkte · Lajme · Kontakte</p>
 <?php if ($ok): ?><div class="alert alert-success" role="alert"><?= e($ok) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger" role="alert"><strong>Gabim:</strong> <?= e($error) ?></div><?php endif; ?>
 
-<div class="mb-3">
-  <a class="btn btn-sm <?= $tab==='pages'?'btn-dark':'btn-outline-dark' ?>" href="?tab=pages">Pages</a>
-  <a class="btn btn-sm <?= $tab==='products'?'btn-dark':'btn-outline-dark' ?>" href="?tab=products">Products</a>
-  <a class="btn btn-sm <?= $tab==='news'?'btn-dark':'btn-outline-dark' ?>" href="?tab=news">News</a>
-  <a class="btn btn-sm <?= $tab==='contacts'?'btn-dark':'btn-outline-dark' ?>" href="?tab=contacts">Contacts</a>
+<div class="mb-3 d-flex flex-wrap gap-2">
+  <a class="btn btn-sm <?= $tab==='users'?'btn-dark':'btn-outline-dark' ?>" href="?tab=users">Përdorues</a>
+  <a class="btn btn-sm <?= $tab==='categories'?'btn-dark':'btn-outline-dark' ?>" href="?tab=categories">Kategori/Menu</a>
+  <a class="btn btn-sm <?= $tab==='pages'?'btn-dark':'btn-outline-dark' ?>" href="?tab=pages">Faqe</a>
+  <a class="btn btn-sm <?= $tab==='products'?'btn-dark':'btn-outline-dark' ?>" href="?tab=products">Produkte</a>
+  <a class="btn btn-sm <?= $tab==='news'?'btn-dark':'btn-outline-dark' ?>" href="?tab=news">Lajme</a>
+  <a class="btn btn-sm <?= $tab==='contacts'?'btn-dark':'btn-outline-dark' ?>" href="?tab=contacts">Kontakte</a>
 </div>
+
+<?php if ($tab === 'users'): ?>
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5><?= $editUser ? 'Ndrysho përdoruesin (Update)' : 'Shto përdorues (Create)' ?><?php if ($editUser): ?> <a href="?tab=users" class="btn btn-sm btn-outline-secondary">Anulo</a><?php endif; ?></h5>
+      <form method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="action" value="user_save">
+        <input type="hidden" name="id" value="<?= $editUser ? (int)$editUser['id'] : 0 ?>">
+        <div class="col-12 col-md-3"><label class="form-label small">Emri</label><input class="form-control form-control-sm" name="name" value="<?= $editUser ? e($editUser['name']) : '' ?>" required></div>
+        <div class="col-12 col-md-3"><label class="form-label small">Email</label><input class="form-control form-control-sm" name="email" type="email" value="<?= $editUser ? e($editUser['email']) : '' ?>" required></div>
+        <div class="col-12 col-md-2"><label class="form-label small">Roli</label><select class="form-select form-select-sm" name="role"><option value="user" <?= ($editUser ? $editUser['role'] : 'user') === 'user' ? 'selected' : '' ?>>user</option><option value="admin" <?= ($editUser ? $editUser['role'] : '') === 'admin' ? 'selected' : '' ?>>admin</option></select></div>
+        <div class="col-12 col-md-2"><label class="form-label small">Fjalëkalim <?= $editUser ? '(bosh = nuk ndrysho)' : '' ?></label><input class="form-control form-control-sm" name="password" type="password" placeholder="<?= $editUser ? 'Lër bosh' : 'Obligativ' ?>"></div>
+        <div class="col-12 col-md-2"><button class="btn btn-sm btn-dark" type="submit"><?= $editUser ? 'Update' : 'Create' ?></button></div>
+      </form>
+    </div>
+  </div>
+  <?php foreach ($users as $u): ?>
+    <div class="card mb-2">
+      <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <span class="fw-bold"><?= e($u['name']) ?></span>
+          <span class="small text-muted"><?= e($u['email']) ?></span>
+          <span class="badge bg-secondary ms-1"><?= e($u['role']) ?></span>
+        </div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-dark" href="?tab=users&edit_user=<?= (int)$u['id'] ?>">Edit</a>
+          <?php if ((int)$u['id'] !== (int)($auth->user()['id'])): ?>
+          <form method="post" onsubmit="return confirm('Fshi këtë përdorues?');" class="d-inline">
+            <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="action" value="user_delete">
+            <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+          </form>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+  <?php endforeach; ?>
+<?php endif; ?>
+
+<?php if ($tab === 'categories'): ?>
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5><?= $editCat ? 'Ndrysho kategorinë (Update)' : 'Shto kategori/Menu (Create)' ?><?php if ($editCat): ?> <a href="?tab=categories" class="btn btn-sm btn-outline-secondary">Anulo</a><?php endif; ?></h5>
+      <form method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="action" value="category_save">
+        <input type="hidden" name="id" value="<?= $editCat ? (int)$editCat['id'] : 0 ?>">
+        <div class="col-12 col-md-4"><label class="form-label small">Emri i kategorisë (menu)</label><input class="form-control form-control-sm" name="name" value="<?= $editCat ? e($editCat['name']) : '' ?>" placeholder="p.sh. Pije, Antipasta" required></div>
+        <div class="col-12 col-md-2"><button class="btn btn-sm btn-dark" type="submit"><?= $editCat ? 'Update' : 'Create' ?></button></div>
+      </form>
+    </div>
+  </div>
+  <?php foreach ($categories as $c): ?>
+    <div class="card mb-2">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><?= e($c['name']) ?></span>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-dark" href="?tab=categories&edit_cat=<?= (int)$c['id'] ?>">Edit</a>
+          <form method="post" onsubmit="return confirm('Fshi këtë kategori?');" class="d-inline">
+            <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="action" value="category_delete">
+            <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  <?php endforeach; ?>
+<?php endif; ?>
 
 <?php if ($tab === 'pages'): ?>
   <div class="card mb-3">

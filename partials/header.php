@@ -26,17 +26,17 @@ main.page-main h1,main.page-main h2,main.page-main h3,main.page-main h4,main.pag
   <marquee><h1>Shtypja e porosive bëhet këtu</h1></marquee>
   <nav>
     <ul>
-      <li><a href="<?= $baseHref ?>index.php">Home</a></li>
-      <li><a href="<?= $baseHref ?>about.php">About</a></li>
-      <li><a href="<?= $baseHref ?>products.php">Products</a></li>
-      <li><a href="<?= $baseHref ?>news.php">News</a></li>
-      <li><a href="<?= $baseHref ?>contact.php">Contact</a></li>
+      <li><a href="<?= e($baseHref) ?>index.php">Home</a></li>
+      <li><a href="<?= e($baseHref) ?>about.php">About</a></li>
+      <li><a href="<?= e($baseHref) ?>products.php">Products</a></li>
+      <li><a href="<?= e($baseHref) ?>news.php">News</a></li>
+      <li><a href="<?= e($baseHref) ?>contact.php">Contact</a></li>
       <?php if ($auth->check()): ?>
-        <?php if ($auth->isAdmin()): ?><li><a href="<?= $inAdmin ? 'index.php' : 'admin/index.php' ?>">Dashboard</a></li><?php endif; ?>
-        <li><a href="<?= $baseHref ?>logout.php">Logout</a></li>
+        <?php if ($auth->isAdmin()): ?><li><a href="<?= e($inAdmin ? 'index.php' : 'admin/index.php') ?>">Dashboard</a></li><?php endif; ?>
+        <li><a href="<?= e($baseHref) ?>logout.php">Logout</a></li>
       <?php else: ?>
-        <li><a href="<?= $baseHref ?>login.php">Login</a></li>
-        <li><a href="<?= $baseHref ?>register.php">Register</a></li>
+        <li><a href="<?= e($baseHref) ?>login.php">Login</a></li>
+        <li><a href="<?= e($baseHref) ?>register.php">Register</a></li>
       <?php endif; ?>
     </ul>
   </nav>

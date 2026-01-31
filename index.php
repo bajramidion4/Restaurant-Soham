@@ -11,6 +11,7 @@ require __DIR__ . '/partials/header.php';
 
 <div class="row g-4">
   <div class="col-12 text-start">
+    <p class="small text-muted mb-0">PHP OK · <?= date('Y-m-d H:i:s') ?> — Nëse ky kohë ndryshon pas refresh, je te faqja e duhur.</p>
     <h2><?= e($page['title'] ?? 'Home') ?></h2>
     <div style="text-align: justify;"><?= nl2br(e($page['body'] ?? '')) ?></div>
   </div>
