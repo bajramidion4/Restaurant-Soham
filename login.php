@@ -1,48 +1,75 @@
 <?php
-declare(strict_types=1);
-require __DIR__ . '/bootstrap.php';
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+session_start();
 
-if ($auth->check()) {
-    redirect($auth->isAdmin() ? 'admin/index.php' : 'index.php');
+$config = require __DIR__ . "/config.php";
+
+$conn = new mysqli(
+    $config['db']['host'],
+    $config['db']['user'],
+    $config['db']['pass'],
+    $config['db']['name']
+);
+
+if ($conn->connect_error) {
+    die("DB Error: " . $conn->connect_error);
 }
 
 $error = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_check($_POST['_csrf'] ?? null)) {
-        $error = 'CSRF error. Rifresko faqen.';
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    $stmt = $conn->prepare("
+        SELECT id, password_hash, role
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+    ");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $user = $res->fetch_assoc();
+    $stmt->close();
+
+    if (!$user || !password_verify($password, $user['password_hash'])) {
+        $error = "Email ose password gabim.";
     } else {
-        $email = trim((string)($_POST['email'] ?? ''));
-        $password = (string)($_POST['password'] ?? '');
-        if (!$auth->login($email, $password)) {
-            $error = 'Email ose password gabim.';
-        } else {
-            redirect($auth->isAdmin() ? 'admin/index.php' : 'index.php');
-        }
+        // ✅ SESSIONET
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['role']    = $user['role'];
+
+        header("Location: products.php");
+        exit;
     }
 }
 
 $title = 'Login';
-require __DIR__ . '/partials/header.php';
+require __DIR__ . "/partials/header.php";
 ?>
 
-<div class="row justify-content-center">
-  <div class="col-12 col-md-6">
-    <h2>Login</h2>
-    <?php if ($error): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
-    <form method="post" class="vstack gap-3">
-      <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
-      <div>
-        <label class="form-label">Email</label>
-        <input class="form-control" name="email" type="email" required>
-      </div>
-      <div>
-        <label class="form-label">Password</label>
-        <input class="form-control" name="password" type="password" required>
-      </div>
-      <button class="btn btn-dark" type="submit">Login</button>
-    </form>
-  </div>
+<div class="container" style="max-width:500px">
+  <h2>Login</h2>
+
+  <?php if ($error): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+  <?php endif; ?>
+
+  <form method="post">
+    <div class="mb-3">
+      <label>Email</label>
+      <input class="form-control" name="email" type="email" required>
+    </div>
+
+    <div class="mb-3">
+      <label>Password</label>
+      <input class="form-control" name="password" type="password" required>
+    </div>
+
+    <button class="btn btn-dark">Login</button>
+  </form>
 </div>
 
-<?php require __DIR__ . '/partials/footer.php'; ?>
-
+<?php require __DIR__ . "/partials/footer.php"; ?>

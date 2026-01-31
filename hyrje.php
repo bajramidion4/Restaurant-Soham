@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mire se erdhe</title>
+  <link rel="stylesheet" href="hyrje.css">
+</head>
+<body>
+  <div class="login-box">
+    <h2>Login</h2>
+<form onsubmit="goToHome(); return false;">
+        <input type="text" placeholder="ID" required>
+        <input type="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+    </form>
+
+    <script>
+      function goToHome() {
+        window.location.href = "index.html";
+      }
+    </script>
+  </div>
+</body>
+</html>

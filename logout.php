@@ -1,7 +1,8 @@
 <?php
-declare(strict_types=1);
-require __DIR__ . '/bootstrap.php';
+session_start();
+session_destroy();
 
-$auth->logout();
-redirect('index.php');
+header("Location: index.php");
+exit;
+
 
