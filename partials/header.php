@@ -31,6 +31,7 @@ $isAdmin   = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
       <?php if (!$isLoggedIn): ?>
         <li><a href="login.php">Login</a></li>
+         <li><a href="register.php">Register</a></li>
       <?php else: ?>
         <?php if ($isAdmin): ?>
           <li><strong style="color:#ffd700;">Admin</strong></li>

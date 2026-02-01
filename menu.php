@@ -1,3 +1,4 @@
+<?php include "header.php"; ?>
 <!DOCTYPE html>
 <html lang="sq">
 <head>
@@ -115,5 +116,6 @@
     </body>
 
 </html>
+<?php include "footer.php"; ?>
 
 
